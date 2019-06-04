@@ -7,6 +7,7 @@ import os
 import numpy as np
 import layers
 import logging
+import math
 
 #Speech Denoising Wavenet Model
 
@@ -86,11 +87,11 @@ class DenoisingWavenet():
                 last_checkpoint = checkpoints[-1]
                 last_checkpoint_path = os.path.join(self.checkpoints_path, last_checkpoint)
                 self.epoch_num = int(last_checkpoint[11:16])
-            print 'Loading model from epoch: %d' % self.epoch_num
+            print('Loading model from epoch: %d' % self.epoch_num)
             model.load_weights(last_checkpoint_path)
 
         else:
-            print 'Building new model...'
+            print('Building new model...')
 
             if not os.path.exists(self.config['training']['path']):
                 os.mkdir(self.config['training']['path'])
@@ -155,7 +156,7 @@ class DenoisingWavenet():
 
     def fit_model(self, train_set_generator, num_train_samples, test_set_generator, num_test_samples, num_epochs):
 
-        print 'Fitting model with %d training samples and %d test samples...' % (num_train_samples, num_test_samples)
+        print('Fitting model with %d training samples and %d test samples...' % (num_train_samples, num_test_samples))
 
         self.model.fit_generator(train_set_generator,
                                  num_train_samples,
@@ -173,15 +174,15 @@ class DenoisingWavenet():
 
         target_sample_index = self.get_target_sample_index()
 
-        return range(target_sample_index - self.half_target_field_length,
-                     target_sample_index + self.half_target_field_length + 1)
+        return range(math.ceil(target_sample_index - self.half_target_field_length),
+                     math.floor(target_sample_index + self.half_target_field_length + 1))
 
     def get_padded_target_field_indices(self):
 
         target_sample_index = self.get_target_sample_index()
 
-        return range(target_sample_index - self.half_target_field_length - self.target_padding,
-                     target_sample_index + self.half_target_field_length + self.target_padding + 1)
+        return range(math.ceil(target_sample_index - self.half_target_field_length - self.target_padding),
+                     math.floor(target_sample_index + self.half_target_field_length + self.target_padding + 1))
 
     def get_target_sample_index(self):
         return int(np.floor(self.input_length / 2.0))
@@ -212,13 +213,11 @@ class DenoisingWavenet():
 
         condition_input = keras.engine.Input(shape=(self.condition_input_length,),
                                              name='condition_input')
-
         data_expanded = layers.AddSingletonDepth()(data_input)
         data_input_target_field_length = layers.Slice(
             (slice(self.samples_of_interest_indices[0], self.samples_of_interest_indices[-1] + 1, 1), Ellipsis),
             (self.padded_target_field_length,1),
             name='data_input_target_field_length')(data_expanded)
-
         data_out = keras.layers.Convolution1D(self.config['model']['filters']['depths']['res'],
                                               self.config['model']['filters']['lengths']['res'], border_mode='same',
                                               bias=False,
@@ -227,7 +226,7 @@ class DenoisingWavenet():
         condition_out = keras.layers.Dense(self.config['model']['filters']['depths']['res'],
                                            name='initial_dense_condition',
                                            bias=False)(condition_input)
-        condition_out = keras.layers.RepeatVector(self.input_length,
+        condition_out = keras.layers.RepeatVector(int(self.input_length),
                                                   name='initial_condition_repeat')(condition_out)
         data_out = keras.layers.Merge(mode='sum', name='initial_data_condition_merge')(
             [data_out, condition_out])
@@ -257,7 +256,6 @@ class DenoisingWavenet():
 
         condition_out = keras.layers.RepeatVector(self.padded_target_field_length,
                                                   name='penultimate_conv_1d_condition_repeat')(condition_out)
-
         data_out = keras.layers.Merge(mode='sum', name='penultimate_conv_1d_condition_merge')([data_out, condition_out])
 
         data_out = self.activation(data_out)
@@ -329,9 +327,9 @@ class DenoisingWavenet():
                                               name='res_%d_condition_slice_2_d%d_s%d' % (
                                                   res_block_i, dilation, stack_i))(condition_out)
 
-        condition_out_1 = keras.layers.RepeatVector(self.input_length, name='res_%d_condition_repeat_1_d%d_s%d' % (
+        condition_out_1 = keras.layers.RepeatVector(int(self.input_length), name='res_%d_condition_repeat_1_d%d_s%d' % (
                                                         res_block_i, dilation, stack_i))(condition_out_1)
-        condition_out_2 = keras.layers.RepeatVector(self.input_length, name='res_%d_condition_repeat_2_d%d_s%d' % (
+        condition_out_2 = keras.layers.RepeatVector(int(self.input_length), name='res_%d_condition_repeat_2_d%d_s%d' % (
                                                         res_block_i, dilation, stack_i))(condition_out_2)
 
         data_out_1 = keras.layers.Merge(mode='sum', name='res_%d_merge_1_d%d_s%d' %

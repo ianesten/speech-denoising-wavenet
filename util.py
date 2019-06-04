@@ -156,7 +156,7 @@ def get_subdict_from_dict(keys, dictionary):
 def pretty_json_dump(values, file_path=None):
 
     if file_path is None:
-        print json.dumps(values, sort_keys=True, indent=4, separators=(',', ': '))
+        print(json.dumps(values, sort_keys=True, indent=4, separators=(',', ': ')))
     else:
         json.dump(values, open(file_path, 'w'), sort_keys=True, indent=4, separators=(',', ': '))
 
