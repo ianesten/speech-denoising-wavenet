@@ -28,9 +28,9 @@ class DenoisingWavenet():
         self.num_condition_classes = config['dataset']['num_condition_classes']
 
         self.condition_input_length = self.get_condition_input_length(self.config['model']['condition_encoding'])
-        self.receptive_field_length = util.compute_receptive_field_length(config['model']['num_stacks'], self.dilations,
-                                                                          config['model']['filters']['lengths']['res'],
-                                                                          1)
+        self.receptive_field_length = int(util.compute_receptive_field_length(config['model']['num_stacks'], self.dilations,
+                                                                              config['model']['filters']['lengths']['res'],
+                                                                              1))
 
         if input_length is not None:
             self.input_length = input_length
