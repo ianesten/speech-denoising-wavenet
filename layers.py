@@ -2,6 +2,7 @@
 # Layers.py
 
 import keras
+import tensorflow as tf
 
 
 class AddSingletonDepth(keras.layers.Layer):
@@ -14,7 +15,7 @@ class AddSingletonDepth(keras.layers.Layer):
         else:
             return x
 
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         if len(input_shape) == 3:
             return input_shape[0], 1, input_shape[1], input_shape[2]
         else:
@@ -29,7 +30,7 @@ class Subtract(keras.layers.Layer):
     def call(self, x, mask=None):
         return x[0] - x[1]
 
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         return input_shape[0]
 
 
@@ -43,19 +44,17 @@ class Slice(keras.layers.Layer):
     def call(self, x, mask=None):
 
         selector = self.selector
-        if len(self.selector) == 2 and not type(self.selector[1]) is slice and not type(self.selector[1]) is int:
-            x = keras.backend.permute_dimensions(x, [0, 2, 1])
-            selector = (self.selector[1], self.selector[0])
 
-        y = x[selector]
+        assert len(selector) == 2
 
-        if len(self.selector) == 2 and not type(self.selector[1]) is slice and not type(self.selector[1]) is int:
-            y = keras.backend.permute_dimensions(y, [0, 2, 1])
-
-        return y
+        if not type(selector[1]) is slice and not type(selector[1]) is int:
+            x = tf.transpose(x, [0, 2, 1])
+            y = x[(selector[1], selector[0])]
+            return tf.transpose(y, [0, 2, 1])
+        return x[selector]
 
 
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
 
         output_shape = (None,)
         for i, dim_length in enumerate(self.desired_output_shape):
